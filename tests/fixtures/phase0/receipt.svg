@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <rect width="900" height="1200" fill="#ece8df"/>
+  <rect x="150" y="70" width="600" height="1060" rx="8" fill="#fffef8" stroke="#d7d1c4" stroke-width="3"/>
+  <g fill="#171717" font-family="Menlo, monospace" font-size="27">
+    <text x="260" y="140" font-size="34" font-weight="700">BALTIC MARKET SIA</text>
+    <text x="245" y="185">Brivibas iela 10, Riga</text>
+    <text x="260" y="225">VAT LV40100000000</text>
+    <text x="225" y="290" font-size="31" font-weight="700">RECEIPT R-2048</text>
+    <text x="260" y="335">2026-08-21 18:42</text>
+    <text x="205" y="410">Milk       2 x 1.20     2.40</text>
+    <text x="205" y="455">Bread                    1.80</text>
+    <text x="205" y="525">Subtotal                 4.20</text>
+    <text x="205" y="570">VAT 21%                  0.88</text>
+    <line x1="205" y1="610" x2="695" y2="610" stroke="#171717" stroke-width="2"/>
+    <text x="205" y="665" font-size="36" font-weight="700">TOTAL EUR            5.08</text>
+    <text x="315" y="735">CARD — PAID</text>
+    <text x="270" y="850">Thank you!</text>
+  </g>
+</svg>
+

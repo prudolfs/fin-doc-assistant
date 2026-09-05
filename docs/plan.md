@@ -753,12 +753,15 @@ the phase checklists.
 
 ### Phase 0 — validation spike
 
-- [ ] Select the first AI model/provider.
-- [ ] Collect a small, permission-safe test set of representative images and PDFs.
-- [ ] Prove Convex action file retrieval and AI SDK PDF/image input.
-- [ ] Define receipt and invoice Zod schemas.
-- [ ] Measure whole-document extraction accuracy, latency, and cost.
-- [ ] Decide initial file/page limits and conditions for fallback processing.
+- [x] Select the first AI model/provider.
+- [x] Collect a small, permission-safe test set of representative images and PDFs.
+- [x] Prove Convex action file retrieval and AI SDK PDF/image input.
+- [x] Define receipt and invoice Zod schemas.
+- [x] Measure whole-document extraction accuracy, latency, and cost.
+- [x] Decide initial file/page limits and conditions for fallback processing.
+
+See [`phase-0-validation.md`](./phase-0-validation.md) for the decisions,
+fixtures, and measured results.
 
 Exit criterion: common receipts and short invoices extract reliably enough to proceed.
 
@@ -904,8 +907,7 @@ Track:
 
 ## 23. Decisions intentionally deferred
 
-- Exact model/provider and fallback model.
-- Initial maximum file size and page count.
+- Fallback model/provider after the Phase 0 choice needs production evidence.
 - OCR engine or document-analysis provider, if one becomes necessary.
 - Multi-currency conversion and exchange-rate source.
 - Whether payment status is user-entered, integrated, or inferred from other records.

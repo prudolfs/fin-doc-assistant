@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["convex/_generated/**"],
+  "ignorePatterns": [".agents/**", ".claude/**", "convex/_generated/**"],
   "indentWidth": 2,
   "singleQuote": true,
   "semi": false,

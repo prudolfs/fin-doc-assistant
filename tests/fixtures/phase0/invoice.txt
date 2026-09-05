@@ -1,0 +1,22 @@
+NORTHWIND OFFICE SIA
+Kalku iela 1, Riga, LV-1050
+VAT ID: LV12345678901
+
+INVOICE INV-1001
+Issue date: 2026-08-01
+Due date: 2026-08-15
+Currency: EUR
+
+Bill to: Sample Consulting SIA
+Elizabetes iela 20, Riga
+
+Description                    Qty      Unit price      Line total
+Paper, A4, 500 sheets            2          5.00            10.00
+Pen set                          1          4.00             4.00
+
+Subtotal                                                EUR 14.00
+VAT 21%                                                  EUR 2.94
+TOTAL                                                   EUR 16.94
+
+Payment due by 2026-08-15.
+

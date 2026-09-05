@@ -1,0 +1,25 @@
+{
+  "receipt.png": {
+    "documentType": "receipt",
+    "merchantOrSupplierName": "BALTIC MARKET SIA",
+    "documentNumber": "R-2048",
+    "issueDate": "2026-08-21",
+    "currency": "EUR",
+    "subtotalMinor": 420,
+    "taxMinor": 88,
+    "totalMinor": 508,
+    "lineItemCount": 2
+  },
+  "invoice.pdf": {
+    "documentType": "invoice",
+    "merchantOrSupplierName": "NORTHWIND OFFICE SIA",
+    "documentNumber": "INV-1001",
+    "issueDate": "2026-08-01",
+    "dueDate": "2026-08-15",
+    "currency": "EUR",
+    "subtotalMinor": 1400,
+    "taxMinor": 294,
+    "totalMinor": 1694,
+    "lineItemCount": 2
+  }
+}

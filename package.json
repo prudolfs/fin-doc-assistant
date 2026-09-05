@@ -9,6 +9,7 @@
     "lint": "oxlint .",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
+    "phase0:evaluate": "tsx scripts/evaluate-phase0.ts",
     "test": "vitest run",
     "check": "tsc --noEmit && oxlint . && oxfmt . --check && vitest run",
     "types": "tsc --noEmit"
@@ -31,6 +32,7 @@
     "convex": "^1.44.0",
     "lucide-react": "^1.32.0",
     "nitro": "3.0.260610-beta",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "shadcn": "^4.18.0",
@@ -46,6 +48,7 @@
     "@vitejs/plugin-react-swc": "^4.3.3",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vite": "^8.2.1",
     "vitest": "^4.1.11"
