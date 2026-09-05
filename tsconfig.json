@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "strict": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@convex/*": ["./convex/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
+}
