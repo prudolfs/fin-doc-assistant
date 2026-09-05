@@ -163,3 +163,44 @@ export const list = query({
       .paginate(args.paginationOpts)
   },
 })
+
+export const get = query({
+  args: { documentId: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      document: schema.doc('documents'),
+      latestJob: v.union(v.null(), schema.doc('documentJobs')),
+      latestExtraction: v.union(v.null(), schema.doc('documentExtractions')),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const documentId = ctx.db.normalizeId('documents', args.documentId)
+    if (!documentId) return null
+    const document = await ctx.db.get('documents', documentId)
+    if (
+      !document ||
+      document.ownerTokenIdentifier !== identity.tokenIdentifier
+    ) {
+      return null
+    }
+
+    const [latestJob, latestExtraction] = await Promise.all([
+      ctx.db
+        .query('documentJobs')
+        .withIndex('by_documentId', (q) => q.eq('documentId', documentId))
+        .order('desc')
+        .first(),
+      ctx.db
+        .query('documentExtractions')
+        .withIndex('by_documentId_and_attempt', (q) =>
+          q.eq('documentId', documentId),
+        )
+        .order('desc')
+        .first(),
+    ])
+
+    return { document, latestJob, latestExtraction }
+  },
+})

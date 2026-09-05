@@ -18,6 +18,7 @@ import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AppChatNewRouteImport } from './routes/app.chat.new'
 import { Route as AppDocumentsIndexRouteImport } from './routes/app.documents.index'
+import { Route as AppDocumentsDocumentIdRouteImport } from './routes/app.documents.$documentId'
 import { Route as AppDocumentsNewRouteImport } from './routes/app.documents.new'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +66,11 @@ const AppDocumentsIndexRoute = AppDocumentsIndexRouteImport.update({
   path: '/documents/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDocumentsDocumentIdRoute = AppDocumentsDocumentIdRouteImport.update({
+  id: '/documents/$documentId',
+  path: '/documents/$documentId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDocumentsNewRoute = AppDocumentsNewRouteImport.update({
   id: '/documents/new',
   path: '/documents/new',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/chat/new': typeof AppChatNewRoute
+  '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/new': typeof AppDocumentsNewRoute
   '/app/documents/': typeof AppDocumentsIndexRoute
 }
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/chat/new': typeof AppChatNewRoute
+  '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/new': typeof AppDocumentsNewRoute
   '/app/documents': typeof AppDocumentsIndexRoute
 }
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/chat/new': typeof AppChatNewRoute
+  '/app/documents/$documentId': typeof AppDocumentsDocumentIdRoute
   '/app/documents/new': typeof AppDocumentsNewRoute
   '/app/documents/': typeof AppDocumentsIndexRoute
 }
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/api/auth/$'
     | '/app/chat/new'
+    | '/app/documents/$documentId'
     | '/app/documents/new'
     | '/app/documents/'
   fileRoutesByTo: FileRoutesByTo
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/auth/$'
     | '/app/chat/new'
+    | '/app/documents/$documentId'
     | '/app/documents/new'
     | '/app/documents'
   id:
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/api/auth/$'
     | '/app/chat/new'
+    | '/app/documents/$documentId'
     | '/app/documents/new'
     | '/app/documents/'
   fileRoutesById: FileRoutesById
@@ -218,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDocumentsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/documents/$documentId': {
+      id: '/app/documents/$documentId'
+      path: '/documents/$documentId'
+      fullPath: '/app/documents/$documentId'
+      preLoaderRoute: typeof AppDocumentsDocumentIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/documents/new': {
       id: '/app/documents/new'
       path: '/documents/new'
@@ -232,6 +251,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppChatNewRoute: typeof AppChatNewRoute
+  AppDocumentsDocumentIdRoute: typeof AppDocumentsDocumentIdRoute
   AppDocumentsNewRoute: typeof AppDocumentsNewRoute
   AppDocumentsIndexRoute: typeof AppDocumentsIndexRoute
 }
@@ -240,6 +260,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppChatNewRoute: AppChatNewRoute,
+  AppDocumentsDocumentIdRoute: AppDocumentsDocumentIdRoute,
   AppDocumentsNewRoute: AppDocumentsNewRoute,
   AppDocumentsIndexRoute: AppDocumentsIndexRoute,
 }

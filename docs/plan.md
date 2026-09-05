@@ -779,14 +779,17 @@ Exit criterion: users can create accounts, sign in, sign out, and access only th
 
 ### Phase 2 — upload and document lifecycle
 
-- [ ] Build upload screen and drop zone.
-- [ ] Generate Convex upload URLs.
-- [ ] Store files and register documents.
-- [ ] Create jobs and schedule internal processing actions.
-- [ ] Show realtime upload/processing state.
-- [ ] Implement whole-document receipt/invoice extraction.
-- [ ] Add schema and arithmetic validation.
-- [ ] Build document list and basic document detail.
+- [x] Build upload screen and drop zone.
+- [x] Generate Convex upload URLs.
+- [x] Store files and register documents.
+- [x] Create jobs and schedule internal processing actions.
+- [x] Show realtime upload/processing state.
+- [x] Implement whole-document receipt/invoice extraction.
+- [x] Add schema and arithmetic validation.
+- [x] Build document list and basic document detail.
+
+See [`phase-2-document-lifecycle.md`](./phase-2-document-lifecycle.md) for the
+implemented flow and verification results.
 
 Exit criterion: a user can upload an image or PDF and receive a persisted, reviewable structured result.
 

@@ -48,7 +48,11 @@ export function AppShell({
   })
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const title = pageTitles[pathname] ?? 'Finance Document Assistant'
+  const title =
+    pageTitles[pathname] ??
+    (pathname.startsWith('/app/documents/')
+      ? 'Document details'
+      : 'Finance Document Assistant')
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-950 dark:bg-neutral-900 dark:text-neutral-50">
