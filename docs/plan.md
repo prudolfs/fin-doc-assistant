@@ -767,13 +767,13 @@ Exit criterion: common receipts and short invoices extract reliably enough to pr
 
 ### Phase 1 — foundation and authentication
 
-- [ ] Create TanStack Start application.
-- [ ] Configure Tailwind and shadcn/ui.
-- [ ] Configure Convex schema and client.
-- [ ] Integrate Better Auth.
-- [ ] Add email/password, Google, and GitHub authentication.
-- [ ] Protect application routes.
-- [ ] Implement application shell, sidebar, top bar, theme, and logout.
+- [x] Create TanStack Start application.
+- [x] Configure Tailwind and shadcn/ui.
+- [x] Configure Convex schema and client.
+- [x] Integrate Better Auth.
+- [x] Add email/password, Google, and GitHub authentication.
+- [x] Protect application routes.
+- [x] Implement application shell, sidebar, top bar, theme, and logout.
 
 Exit criterion: users can create accounts, sign in, sign out, and access only their protected shell.
 
