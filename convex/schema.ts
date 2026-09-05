@@ -4,6 +4,8 @@ import {
   acceptedMimeTypeValidator,
   documentStatusValidator,
   financeDocumentExtractionValidator,
+  documentAuditActionValidator,
+  editableDocumentFieldValidator,
   processingStageValidator,
   usageValidator,
 } from './documentValidators'
@@ -38,6 +40,8 @@ export default defineSchema({
     latencyMs: v.optional(v.number()),
     estimatedCostUsd: v.optional(v.number()),
     needsReview: v.boolean(),
+    confirmedFields: v.optional(v.array(editableDocumentFieldValidator)),
+    lastReviewedAt: v.optional(v.number()),
     safeErrorMessage: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -46,7 +50,12 @@ export default defineSchema({
       'ownerTokenIdentifier',
       'createdAt',
     ])
-    .index('by_storageId', ['storageId']),
+    .index('by_storageId', ['storageId'])
+    .index('by_ownerTokenIdentifier_and_sha256_and_schemaVersion', [
+      'ownerTokenIdentifier',
+      'sha256',
+      'schemaVersion',
+    ]),
 
   documentJobs: defineTable({
     ownerTokenIdentifier: v.string(),
@@ -81,4 +90,14 @@ export default defineSchema({
     estimatedCostUsd: v.optional(v.number()),
     createdAt: v.number(),
   }).index('by_documentId_and_attempt', ['documentId', 'attempt']),
+
+  documentAuditEvents: defineTable({
+    ownerTokenIdentifier: v.string(),
+    documentId: v.id('documents'),
+    action: documentAuditActionValidator,
+    attempt: v.optional(v.number()),
+    changedFields: v.optional(v.array(editableDocumentFieldValidator)),
+    detail: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index('by_documentId', ['documentId']),
 })

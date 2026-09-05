@@ -59,6 +59,18 @@ describe('validateDocumentExtraction', () => {
       'A line-item source page is outside the document page range.',
     )
   })
+
+  it('rejects header evidence beyond the document', () => {
+    const extraction = {
+      ...validInvoice,
+      evidence: [
+        { field: 'totalMinor', printedValue: '12.10 EUR', sourcePage: 3 },
+      ],
+    }
+    expect(validateDocumentExtraction(extraction, 1)).toContain(
+      'An evidence source page is outside the document page range.',
+    )
+  })
 })
 
 describe('estimateModelCostUsd', () => {

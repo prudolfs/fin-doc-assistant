@@ -66,6 +66,10 @@ export function validateDocumentExtraction(
     errors.push('A line-item source page is outside the document page range.')
   }
 
+  if (extraction.evidence.some((item) => item.sourcePage > pageCount)) {
+    errors.push('An evidence source page is outside the document page range.')
+  }
+
   return errors
 }
 

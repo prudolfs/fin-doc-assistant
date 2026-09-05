@@ -4,6 +4,12 @@ const nullableText = z.string().trim().min(1).nullable()
 const nullableMinorUnits = z.number().int().nullable()
 const nullablePage = z.number().int().positive().nullable()
 
+export const extractionEvidenceSchema = z.object({
+  field: z.string().trim().min(1),
+  printedValue: z.string().trim().min(1),
+  sourcePage: z.number().int().positive(),
+})
+
 export const extractedDateSchema = z.object({
   printed: nullableText,
   iso: z
@@ -46,6 +52,7 @@ const commonDocumentShape = {
   taxMinor: nullableMinorUnits,
   totalMinor: nullableMinorUnits,
   lineItems: z.array(extractedLineItemSchema).max(100),
+  evidence: z.array(extractionEvidenceSchema).max(30).default([]),
   warnings: z.array(z.string().trim().min(1)).max(20),
   confidence: z.number().min(0).max(1),
 }

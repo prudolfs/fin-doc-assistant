@@ -5,6 +5,9 @@ import {
   DOCUMENT_PROMPT_VERSION,
   DOCUMENT_SCHEMA_VERSION,
 } from '../../shared/constants'
+import { validateDocumentExtraction } from '../../shared/documentValidation'
+import { mergeConfirmedDocumentFields } from '../../shared/documentReview'
+import { financeDocumentExtractionSchema } from '../../shared/financeSchemas'
 import { internalMutation, internalQuery } from '../_generated/server'
 import {
   financeDocumentExtractionValidator,
@@ -62,6 +65,15 @@ export const markProcessing = internalMutation({
       ...(job.startedAt === undefined ? { startedAt: now } : {}),
       updatedAt: now,
     })
+    if (args.stage === 'downloading' && job.status === 'queued') {
+      await ctx.db.insert('documentAuditEvents', {
+        ownerTokenIdentifier: job.ownerTokenIdentifier,
+        documentId: args.documentId,
+        action: 'processing_started',
+        attempt: job.attempt,
+        createdAt: now,
+      })
+    }
     return null
   },
 })
@@ -88,8 +100,23 @@ export const complete = internalMutation({
     if (!document || !job || job.documentId !== document._id) {
       throw new Error('Document job was not found')
     }
-    const status =
-      args.validationErrors.length > 0 ? 'needs_review' : 'completed'
+    const generated = financeDocumentExtractionSchema.parse(args.extraction)
+    const existing = document.structuredResult
+      ? financeDocumentExtractionSchema.parse(document.structuredResult)
+      : null
+    const normalized =
+      existing && document.confirmedFields?.length
+        ? mergeConfirmedDocumentFields(
+            generated,
+            existing,
+            document.confirmedFields,
+          )
+        : generated
+    const validationErrors = validateDocumentExtraction(
+      normalized,
+      args.pageCount,
+    )
+    const status = validationErrors.length > 0 ? 'needs_review' : 'completed'
     await ctx.db.insert('documentExtractions', {
       ownerTokenIdentifier: document.ownerTokenIdentifier,
       documentId: args.documentId,
@@ -97,10 +124,10 @@ export const complete = internalMutation({
       schemaVersion: DOCUMENT_SCHEMA_VERSION,
       promptVersion: DOCUMENT_PROMPT_VERSION,
       model: args.model,
-      rawStructuredOutput: args.extraction,
-      normalizedOutput: args.extraction,
-      warnings: args.extraction.warnings,
-      validationErrors: args.validationErrors,
+      rawStructuredOutput: generated,
+      normalizedOutput: normalized,
+      warnings: normalized.warnings,
+      validationErrors,
       usage: args.usage,
       latencyMs: args.latencyMs,
       ...(args.estimatedCostUsd === undefined
@@ -109,36 +136,33 @@ export const complete = internalMutation({
       createdAt: now,
     })
     await ctx.db.patch(args.documentId, {
-      documentType: args.extraction.documentType,
+      schemaVersion: DOCUMENT_SCHEMA_VERSION,
+      documentType: normalized.documentType,
       status,
       processingStage: 'completed',
       pageCount: args.pageCount,
-      ...(args.extraction.merchantOrSupplierName
-        ? { merchantOrSupplierName: args.extraction.merchantOrSupplierName }
+      ...(normalized.merchantOrSupplierName
+        ? { merchantOrSupplierName: normalized.merchantOrSupplierName }
         : {}),
-      ...(args.extraction.documentNumber
-        ? { documentNumber: args.extraction.documentNumber }
+      ...(normalized.documentNumber
+        ? { documentNumber: normalized.documentNumber }
         : {}),
-      ...(args.extraction.issueDate.iso
-        ? { issueDate: args.extraction.issueDate.iso }
+      ...(normalized.issueDate.iso
+        ? { issueDate: normalized.issueDate.iso }
         : {}),
-      ...(args.extraction.dueDate.iso
-        ? { dueDate: args.extraction.dueDate.iso }
-        : {}),
-      ...(args.extraction.currency
-        ? { currency: args.extraction.currency }
-        : {}),
-      ...(args.extraction.subtotalMinor === null
+      ...(normalized.dueDate.iso ? { dueDate: normalized.dueDate.iso } : {}),
+      ...(normalized.currency ? { currency: normalized.currency } : {}),
+      ...(normalized.subtotalMinor === null
         ? {}
-        : { subtotalMinor: args.extraction.subtotalMinor }),
-      ...(args.extraction.taxMinor === null
+        : { subtotalMinor: normalized.subtotalMinor }),
+      ...(normalized.taxMinor === null
         ? {}
-        : { taxMinor: args.extraction.taxMinor }),
-      ...(args.extraction.totalMinor === null
+        : { taxMinor: normalized.taxMinor }),
+      ...(normalized.totalMinor === null
         ? {}
-        : { totalMinor: args.extraction.totalMinor }),
-      structuredResult: args.extraction,
-      validationErrors: args.validationErrors,
+        : { totalMinor: normalized.totalMinor }),
+      structuredResult: normalized,
+      validationErrors,
       model: args.model,
       usage: args.usage,
       latencyMs: args.latencyMs,
@@ -154,6 +178,14 @@ export const complete = internalMutation({
       completedAt: now,
       updatedAt: now,
     })
+    await ctx.db.insert('documentAuditEvents', {
+      ownerTokenIdentifier: document.ownerTokenIdentifier,
+      documentId: args.documentId,
+      action: 'processing_completed',
+      attempt: job.attempt,
+      detail: status,
+      createdAt: now,
+    })
     return null
   },
 })
@@ -168,12 +200,25 @@ export const fail = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now()
+    const document = await ctx.db.get('documents', args.documentId)
+    const job = await ctx.db.get('documentJobs', args.jobId)
+    if (!document || !job || job.documentId !== document._id) {
+      throw new Error('Document job was not found')
+    }
     await ctx.db.patch(args.documentId, {
       status: 'failed',
       processingStage: 'failed',
       needsReview: true,
       safeErrorMessage: args.safeErrorMessage,
       updatedAt: now,
+    })
+    await ctx.db.insert('documentAuditEvents', {
+      ownerTokenIdentifier: document.ownerTokenIdentifier,
+      documentId: args.documentId,
+      action: 'processing_failed',
+      attempt: job.attempt,
+      detail: args.errorCode,
+      createdAt: now,
     })
     await ctx.db.patch(args.jobId, {
       status: 'failed',

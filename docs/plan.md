@@ -795,12 +795,15 @@ Exit criterion: a user can upload an image or PDF and receive a persisted, revie
 
 ### Phase 3 — review and data quality
 
-- [ ] Add document preview.
-- [ ] Add editable fields and line items.
-- [ ] Preserve user-confirmed values.
-- [ ] Add evidence/page references.
-- [ ] Implement review, retry, and delete flows.
-- [ ] Add duplicate detection and processing audit records.
+- [x] Add document preview.
+- [x] Add editable fields and line items.
+- [x] Preserve user-confirmed values.
+- [x] Add evidence/page references.
+- [x] Implement review, retry, and delete flows.
+- [x] Add duplicate detection and processing audit records.
+
+See [`phase-3-review-and-data-quality.md`](./phase-3-review-and-data-quality.md)
+for the review model, lifecycle safeguards, and verification results.
 
 Exit criterion: incorrect extraction can be identified and safely corrected.
 

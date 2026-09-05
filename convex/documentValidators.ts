@@ -41,6 +41,44 @@ const extractedLineItemValidator = v.object({
   sourcePage: v.union(v.number(), v.null()),
 })
 
+const extractionEvidenceValidator = v.object({
+  field: v.string(),
+  printedValue: v.string(),
+  sourcePage: v.number(),
+})
+
+export const editableDocumentFieldValidator = v.union(
+  v.literal('documentType'),
+  v.literal('merchantOrSupplierName'),
+  v.literal('supplierAddress'),
+  v.literal('supplierTaxIdentifier'),
+  v.literal('customerName'),
+  v.literal('customerAddress'),
+  v.literal('documentNumber'),
+  v.literal('issueDate'),
+  v.literal('dueDate'),
+  v.literal('currency'),
+  v.literal('paymentStatus'),
+  v.literal('paymentMethod'),
+  v.literal('subtotalMinor'),
+  v.literal('discountMinor'),
+  v.literal('taxMinor'),
+  v.literal('totalMinor'),
+  v.literal('lineItems'),
+)
+
+export const documentAuditActionValidator = v.union(
+  v.literal('uploaded'),
+  v.literal('duplicate_detected'),
+  v.literal('processing_started'),
+  v.literal('processing_completed'),
+  v.literal('processing_failed'),
+  v.literal('review_saved'),
+  v.literal('approved'),
+  v.literal('retry_queued'),
+  v.literal('deleted'),
+)
+
 const commonExtractionFields = {
   merchantOrSupplierName: v.union(v.string(), v.null()),
   supplierAddress: v.union(v.string(), v.null()),
@@ -64,6 +102,7 @@ const commonExtractionFields = {
   taxMinor: v.union(v.number(), v.null()),
   totalMinor: v.union(v.number(), v.null()),
   lineItems: v.array(extractedLineItemValidator),
+  evidence: v.optional(v.array(extractionEvidenceValidator)),
   warnings: v.array(v.string()),
   confidence: v.number(),
 }
