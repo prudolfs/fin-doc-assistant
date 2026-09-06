@@ -11,6 +11,26 @@ import {
 } from './documentValidators'
 
 export default defineSchema({
+  chats: defineTable({
+    ownerTokenIdentifier: v.string(),
+    threadId: v.string(),
+    title: v.string(),
+    status: v.union(
+      v.literal('idle'),
+      v.literal('responding'),
+      v.literal('failed'),
+    ),
+    safeErrorMessage: v.optional(v.string()),
+    lastMessageAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_ownerTokenIdentifier_and_lastMessageAt', [
+      'ownerTokenIdentifier',
+      'lastMessageAt',
+    ])
+    .index('by_threadId', ['threadId']),
+
   documents: defineTable({
     ownerTokenIdentifier: v.string(),
     storageId: v.id('_storage'),

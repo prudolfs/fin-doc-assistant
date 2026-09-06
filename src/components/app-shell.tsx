@@ -1,4 +1,6 @@
+import { api } from '../../convex/_generated/api'
 import { Link, useRouterState } from '@tanstack/react-router'
+import { useQuery } from 'convex/react'
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -52,7 +54,9 @@ export function AppShell({
     pageTitles[pathname] ??
     (pathname.startsWith('/app/documents/')
       ? 'Document details'
-      : 'Finance Document Assistant')
+      : pathname.startsWith('/app/chat/')
+        ? 'Conversation'
+        : 'Finance Document Assistant')
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-950 dark:bg-neutral-900 dark:text-neutral-50">
@@ -104,6 +108,9 @@ function Sidebar({
   onCloseMobile: () => void
   onToggleCollapsed: () => void
 }) {
+  const recentChats = useQuery(api.chats.listRecent)
+  const groupedChats = groupRecentChats(recentChats ?? [])
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-50 flex border-r bg-neutral-950 text-neutral-100 transition-[width,transform] duration-200 ${collapsed ? 'w-20' : 'w-72'} ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
@@ -155,13 +162,39 @@ function Sidebar({
         </nav>
 
         {!collapsed && (
-          <div className="mt-8 min-h-0 flex-1 px-2">
-            <p className="text-xs font-semibold tracking-[0.14em] text-neutral-500 uppercase">
+          <div className="mt-8 min-h-0 flex-1 overflow-y-auto px-1">
+            <p className="px-2 text-xs font-semibold tracking-[0.14em] text-neutral-500 uppercase">
               Recent chats
             </p>
-            <p className="mt-3 text-xs leading-5 text-neutral-500">
-              No conversations yet. Recent chats arrive in Phase 4.
-            </p>
+            {recentChats && recentChats.length === 0 && (
+              <p className="mt-3 px-2 text-xs leading-5 text-neutral-500">
+                No conversations yet.
+              </p>
+            )}
+            <div className="mt-3 space-y-5">
+              {groupedChats.map((group) => (
+                <section key={group.label}>
+                  <p className="px-2 text-[10px] font-semibold tracking-wide text-neutral-600 uppercase">
+                    {group.label}
+                  </p>
+                  <div className="mt-1 space-y-0.5">
+                    {group.chats.map(({ _id: chatId, title }) => (
+                      <Link
+                        key={chatId}
+                        activeProps={{ className: 'bg-white/12 text-white' }}
+                        className="block truncate rounded-lg px-2 py-2 text-xs text-neutral-400 hover:bg-white/8 hover:text-white"
+                        to="/app/chat/$chatId"
+                        params={{ chatId }}
+                        title={title}
+                        onClick={onCloseMobile}
+                      >
+                        {title}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           </div>
         )}
 
@@ -180,6 +213,42 @@ function Sidebar({
       </div>
     </aside>
   )
+}
+
+function groupRecentChats<
+  Chat extends { _id: string; title: string; lastMessageAt: number },
+>(chats: Array<Chat>) {
+  const now = new Date()
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime()
+  const groups = [
+    { label: 'Today', minimum: today, chats: [] as Array<Chat> },
+    {
+      label: 'Yesterday',
+      minimum: today - 24 * 60 * 60 * 1_000,
+      chats: [] as Array<Chat>,
+    },
+    {
+      label: 'Previous 7 days',
+      minimum: today - 7 * 24 * 60 * 60 * 1_000,
+      chats: [] as Array<Chat>,
+    },
+    {
+      label: 'Older',
+      minimum: Number.NEGATIVE_INFINITY,
+      chats: [] as Array<Chat>,
+    },
+  ]
+  for (const chat of chats) {
+    const group = groups.find(
+      (candidate) => chat.lastMessageAt >= candidate.minimum,
+    )
+    group?.chats.push(chat)
+  }
+  return groups.filter((group) => group.chats.length > 0)
 }
 
 function ThemeControl() {

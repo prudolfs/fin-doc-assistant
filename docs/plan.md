@@ -809,12 +809,12 @@ Exit criterion: incorrect extraction can be identified and safely corrected.
 
 ### Phase 4 — chat and tools
 
-- [ ] Build chat threads and recent-chat navigation.
-- [ ] Add streaming assistant UI.
-- [ ] Implement the core read-only finance tools.
-- [ ] Retrieve only relevant data instead of injecting all documents.
-- [ ] Persist tool-aware messages.
-- [ ] Add source-document links to answers.
+- [x] Build chat threads and recent-chat navigation.
+- [x] Add streaming assistant UI.
+- [x] Implement the core read-only finance tools.
+- [x] Retrieve only relevant data instead of injecting all documents.
+- [x] Persist tool-aware messages.
+- [x] Add source-document links to answers.
 
 Exit criterion: chat answers are grounded in the authenticated user's documents and deterministic tool results.
 
