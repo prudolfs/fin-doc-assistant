@@ -72,6 +72,13 @@ export const financeDocumentExtractionSchema = z.object({
   ...commonDocumentShape,
 })
 
+export const pageBatchExtractionSchema = z.object({
+  documents: z.array(financeDocumentExtractionSchema).max(4),
+  multipleDocumentsDetected: z.boolean(),
+  warnings: z.array(z.string().trim().min(1)).max(10),
+})
+
 export type FinanceDocumentExtraction = z.infer<
   typeof financeDocumentExtractionSchema
 >
+export type PageBatchExtraction = z.infer<typeof pageBatchExtractionSchema>

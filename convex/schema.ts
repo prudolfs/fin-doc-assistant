@@ -6,7 +6,9 @@ import {
   financeDocumentExtractionValidator,
   documentAuditActionValidator,
   editableDocumentFieldValidator,
+  pageExtractionSourceValidator,
   processingStageValidator,
+  processingStrategyValidator,
   usageValidator,
 } from './documentValidators'
 import { chartSpecValidator } from './chartValidators'
@@ -75,6 +77,8 @@ export default defineSchema({
     confirmedFields: v.optional(v.array(editableDocumentFieldValidator)),
     lastReviewedAt: v.optional(v.number()),
     safeErrorMessage: v.optional(v.string()),
+    processingStrategy: v.optional(processingStrategyValidator),
+    multipleDocumentsDetected: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -120,8 +124,20 @@ export default defineSchema({
     usage: usageValidator,
     latencyMs: v.number(),
     estimatedCostUsd: v.optional(v.number()),
+    processingStrategy: v.optional(processingStrategyValidator),
+    multipleDocumentsDetected: v.optional(v.boolean()),
     createdAt: v.number(),
   }).index('by_documentId_and_attempt', ['documentId', 'attempt']),
+
+  documentPages: defineTable({
+    ownerTokenIdentifier: v.string(),
+    documentId: v.id('documents'),
+    pageNumber: v.number(),
+    extractionSource: pageExtractionSourceValidator,
+    text: v.optional(v.string()),
+    ocrConfidence: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index('by_documentId_and_pageNumber', ['documentId', 'pageNumber']),
 
   documentAuditEvents: defineTable({
     ownerTokenIdentifier: v.string(),

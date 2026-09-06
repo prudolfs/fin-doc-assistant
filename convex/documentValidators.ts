@@ -18,10 +18,24 @@ export const documentStatusValidator = v.union(
 export const processingStageValidator = v.union(
   v.literal('queued'),
   v.literal('downloading'),
+  v.literal('inspecting'),
   v.literal('extracting'),
+  v.literal('rendering'),
+  v.literal('ocr'),
+  v.literal('reconciling'),
   v.literal('validating'),
   v.literal('completed'),
   v.literal('failed'),
+)
+
+export const processingStrategyValidator = v.union(
+  v.literal('direct'),
+  v.literal('pdf_fallback'),
+)
+
+export const pageExtractionSourceValidator = v.union(
+  v.literal('embedded_text'),
+  v.literal('vision'),
 )
 
 const extractedDateValidator = v.object({

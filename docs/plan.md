@@ -830,11 +830,11 @@ Exit criterion: analytical questions can return correct, useful, safe charts.
 
 ### Phase 6 — advanced invoice fallback
 
-- [ ] Add PDF page inspection.
-- [ ] Add page rendering and OCR/vision fallback.
-- [ ] Add page-batch extraction for long documents.
-- [ ] Add reconciliation and line-item deduplication.
-- [ ] Add multiple-document detection if required.
+- [x] Add PDF page inspection.
+- [x] Add page rendering and OCR/vision fallback.
+- [x] Add page-batch extraction for long documents.
+- [x] Add reconciliation and line-item deduplication.
+- [x] Add multiple-document detection if required.
 
 Exit criterion: the difficult invoice classes identified during production testing meet the agreed accuracy target.
 

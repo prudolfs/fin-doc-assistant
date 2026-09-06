@@ -21,6 +21,7 @@ import type * as http from "../http.js";
 import type * as internal_chats from "../internal/chats.js";
 import type * as internal_documentJobs from "../internal/documentJobs.js";
 import type * as lib_documentConfig from "../lib/documentConfig.js";
+import type * as lib_pdfFallback from "../lib/pdfFallback.js";
 
 import type {
   ApiFromModules,
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "internal/chats": typeof internal_chats;
   "internal/documentJobs": typeof internal_documentJobs;
   "lib/documentConfig": typeof lib_documentConfig;
+  "lib/pdfFallback": typeof lib_pdfFallback;
 }>;
 
 /**

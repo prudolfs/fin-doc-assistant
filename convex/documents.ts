@@ -407,7 +407,7 @@ export const remove = mutation({
       throw new Error('Wait for processing to finish before deleting')
     }
 
-    const [jobs, extractions] = await Promise.all([
+    const [jobs, extractions, pages] = await Promise.all([
       ctx.db
         .query('documentJobs')
         .withIndex('by_documentId', (q) => q.eq('documentId', args.documentId))
@@ -418,6 +418,12 @@ export const remove = mutation({
           q.eq('documentId', args.documentId),
         )
         .take(10),
+      ctx.db
+        .query('documentPages')
+        .withIndex('by_documentId_and_pageNumber', (q) =>
+          q.eq('documentId', args.documentId),
+        )
+        .take(51),
     ])
     const now = Date.now()
     await ctx.db.insert('documentAuditEvents', {
@@ -431,6 +437,7 @@ export const remove = mutation({
     for (const extraction of extractions) {
       await ctx.db.delete('documentExtractions', extraction._id)
     }
+    for (const page of pages) await ctx.db.delete('documentPages', page._id)
     await ctx.storage.delete(document.storageId)
     await ctx.db.delete('documents', args.documentId)
     return null

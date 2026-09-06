@@ -11,6 +11,8 @@ import { financeDocumentExtractionSchema } from '../../shared/financeSchemas'
 import { internalMutation, internalQuery } from '../_generated/server'
 import {
   financeDocumentExtractionValidator,
+  pageExtractionSourceValidator,
+  processingStrategyValidator,
   usageValidator,
 } from '../documentValidators'
 import schema from '../schema'
@@ -43,7 +45,11 @@ export const markProcessing = internalMutation({
     jobId: v.id('documentJobs'),
     stage: v.union(
       v.literal('downloading'),
+      v.literal('inspecting'),
       v.literal('extracting'),
+      v.literal('rendering'),
+      v.literal('ocr'),
+      v.literal('reconciling'),
       v.literal('validating'),
     ),
   },
@@ -84,11 +90,13 @@ export const complete = internalMutation({
     jobId: v.id('documentJobs'),
     extraction: financeDocumentExtractionValidator,
     pageCount: v.number(),
-    validationErrors: v.array(v.string()),
     model: v.string(),
     usage: usageValidator,
     latencyMs: v.number(),
     estimatedCostUsd: v.optional(v.number()),
+    processingStrategy: processingStrategyValidator,
+    multipleDocumentsDetected: v.boolean(),
+    forcedValidationErrors: v.array(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -112,10 +120,10 @@ export const complete = internalMutation({
             document.confirmedFields,
           )
         : generated
-    const validationErrors = validateDocumentExtraction(
-      normalized,
-      args.pageCount,
-    )
+    const validationErrors = [
+      ...validateDocumentExtraction(normalized, args.pageCount),
+      ...args.forcedValidationErrors,
+    ]
     const status = validationErrors.length > 0 ? 'needs_review' : 'completed'
     await ctx.db.insert('documentExtractions', {
       ownerTokenIdentifier: document.ownerTokenIdentifier,
@@ -133,6 +141,8 @@ export const complete = internalMutation({
       ...(args.estimatedCostUsd === undefined
         ? {}
         : { estimatedCostUsd: args.estimatedCostUsd }),
+      processingStrategy: args.processingStrategy,
+      multipleDocumentsDetected: args.multipleDocumentsDetected,
       createdAt: now,
     })
     await ctx.db.patch(args.documentId, {
@@ -169,6 +179,8 @@ export const complete = internalMutation({
       ...(args.estimatedCostUsd === undefined
         ? {}
         : { estimatedCostUsd: args.estimatedCostUsd }),
+      processingStrategy: args.processingStrategy,
+      multipleDocumentsDetected: args.multipleDocumentsDetected,
       needsReview: status === 'needs_review',
       updatedAt: now,
     })
@@ -186,6 +198,48 @@ export const complete = internalMutation({
       detail: status,
       createdAt: now,
     })
+    return null
+  },
+})
+
+export const replacePages = internalMutation({
+  args: {
+    documentId: v.id('documents'),
+    jobId: v.id('documentJobs'),
+    pages: v.array(
+      v.object({
+        pageNumber: v.number(),
+        extractionSource: pageExtractionSourceValidator,
+        text: v.optional(v.string()),
+        ocrConfidence: v.optional(v.number()),
+      }),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const [document, job] = await Promise.all([
+      ctx.db.get('documents', args.documentId),
+      ctx.db.get('documentJobs', args.jobId),
+    ])
+    if (!document || !job || job.documentId !== document._id) {
+      throw new Error('Document job was not found')
+    }
+    const existing = await ctx.db
+      .query('documentPages')
+      .withIndex('by_documentId_and_pageNumber', (q) =>
+        q.eq('documentId', args.documentId),
+      )
+      .take(51)
+    for (const page of existing) await ctx.db.delete(page._id)
+    const now = Date.now()
+    for (const page of args.pages.slice(0, 50)) {
+      await ctx.db.insert('documentPages', {
+        ownerTokenIdentifier: document.ownerTokenIdentifier,
+        documentId: args.documentId,
+        ...page,
+        createdAt: now,
+      })
+    }
     return null
   },
 })
