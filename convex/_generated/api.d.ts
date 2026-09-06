@@ -9,6 +9,8 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chartArtifacts from "../chartArtifacts.js";
+import type * as chartValidators from "../chartValidators.js";
 import type * as chatActions from "../chatActions.js";
 import type * as chats from "../chats.js";
 import type * as documentProcessing from "../documentProcessing.js";
@@ -28,6 +30,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  chartArtifacts: typeof chartArtifacts;
+  chartValidators: typeof chartValidators;
   chatActions: typeof chatActions;
   chats: typeof chats;
   documentProcessing: typeof documentProcessing;

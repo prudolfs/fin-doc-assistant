@@ -820,11 +820,11 @@ Exit criterion: chat answers are grounded in the authenticated user's documents 
 
 ### Phase 5 — charts
 
-- [ ] Define and validate the chart specification.
-- [ ] Implement deterministic chart-data aggregation.
-- [ ] Render TanStack Charts in assistant messages.
-- [ ] Add accessible table/text alternatives.
-- [ ] Test empty data, large data, multiple currencies, and mobile rendering.
+- [x] Define and validate the chart specification.
+- [x] Implement deterministic chart-data aggregation.
+- [x] Render TanStack Charts in assistant messages.
+- [x] Add accessible table/text alternatives.
+- [x] Test empty data, large data, multiple currencies, and mobile rendering.
 
 Exit criterion: analytical questions can return correct, useful, safe charts.
 

@@ -9,7 +9,13 @@ import { z } from 'zod'
 import { components, internal } from './_generated/api'
 import { env, internalAction } from './_generated/server'
 import { resolveChatModel } from './lib/documentConfig'
+import {
+  chartIntentSchema,
+  chartIntervalSchema,
+  chartTypeSchema,
+} from '../shared/chartSpec'
 import type { ActionCtx } from './_generated/server'
+import type { Id } from './_generated/dataModel'
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const optionalDateRange = {
@@ -17,7 +23,12 @@ const optionalDateRange = {
   toDate: isoDate.optional(),
 }
 
-function createFinanceTools(ctx: ActionCtx, ownerTokenIdentifier: string) {
+function createFinanceTools(
+  ctx: ActionCtx,
+  ownerTokenIdentifier: string,
+  chatId: Id<'chats'>,
+  promptMessageId: string,
+) {
   return {
     searchFinanceDocuments: tool({
       description:
@@ -118,12 +129,51 @@ function createFinanceTools(ctx: ActionCtx, ownerTokenIdentifier: string) {
           ...input,
         }),
     }),
+    getChartData: tool({
+      description:
+        'Create validated chart artifacts from deterministic finance aggregation. Use for useful numeric relationships, not single values. Each currency is charted separately. Time intents support bar, line, or area; categorical intents support bar or pie.',
+      inputSchema: z.object({
+        intent: chartIntentSchema,
+        chartType: chartTypeSchema.optional(),
+        interval: chartIntervalSchema.optional(),
+        currency: z
+          .string()
+          .trim()
+          .toUpperCase()
+          .regex(/^[A-Z]{3}$/)
+          .optional(),
+        ...optionalDateRange,
+      }),
+      execute: async (input): Promise<unknown> => {
+        const result = await ctx.runQuery(internal.financeTools.getChartData, {
+          ownerTokenIdentifier,
+          ...input,
+        })
+        const artifactIds = await ctx.runMutation(
+          internal.chartArtifacts.saveForMessage,
+          {
+            ownerTokenIdentifier,
+            chatId,
+            messageId: promptMessageId,
+            specs: result.charts,
+          },
+        )
+        return {
+          ...result,
+          charts: result.charts.map((spec, index) => ({
+            artifactId: artifactIds[index],
+            spec,
+          })),
+        }
+      },
+    }),
   }
 }
 
 const instructions = `You are a careful personal finance document assistant.
 Answer questions only from the current user's data returned by the available read-only tools.
 Call the smallest relevant tool instead of asking for or assuming all documents.
+Use getChartData when a trend, distribution, concentration, or comparison is materially clearer as a chart; do not chart a single value.
 Never invent documents, suppliers, dates, payment states, currencies, totals, or tax conclusions.
 Money is returned in integer minor units. Convert it to readable decimal amounts and keep different currencies separate.
 Every document-derived claim must include at least one Markdown source link using the sourceUrl and originalFilename returned by a tool.
@@ -166,7 +216,12 @@ export const respond = internalAction({
         },
         {
           promptMessageId: args.promptMessageId,
-          tools: createFinanceTools(ctx, args.ownerTokenIdentifier),
+          tools: createFinanceTools(
+            ctx,
+            args.ownerTokenIdentifier,
+            args.chatId,
+            args.promptMessageId,
+          ),
         },
         {
           contextOptions: { recentMessages: 20 },

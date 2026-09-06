@@ -9,6 +9,8 @@ import {
   User,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { extractChartSpecs } from '../../shared/chartSpec'
+import { FinanceChart } from './finance-chart'
 import type { FormEvent, ReactNode } from 'react'
 
 export function ChatComposer({
@@ -181,6 +183,8 @@ function MessagePart({ part }: { part: UIMessage['parts'][number] }) {
       ? record.toolName
       : part.type.replace('tool-', '')
   const sources = sourceDocuments(record.output)
+  const charts =
+    toolName === 'getChartData' ? extractChartSpecs(record.output) : []
   const finished = state === 'output-available'
   return (
     <div className="rounded-2xl border bg-neutral-50 p-3 dark:bg-neutral-900">
@@ -195,6 +199,9 @@ function MessagePart({ part }: { part: UIMessage['parts'][number] }) {
           {finished ? 'Complete' : 'Running'}
         </span>
       </div>
+      {charts.map((spec) => (
+        <FinanceChart key={`${spec.title}-${spec.currency}`} spec={spec} />
+      ))}
       {sources.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {sources.map((source) => (

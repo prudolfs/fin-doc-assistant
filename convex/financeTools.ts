@@ -5,7 +5,14 @@ import {
   compareCurrencyTotals,
   totalsByCurrency,
 } from '../shared/financeCalculations'
+import { buildFinanceChartSpecs } from '../shared/chartSpec'
 import { internalQuery } from './_generated/server'
+import {
+  chartIntentValidator,
+  chartIntervalValidator,
+  chartSpecValidator,
+  chartTypeValidator,
+} from './chartValidators'
 import { financeDocumentExtractionValidator } from './documentValidators'
 import type { Doc } from './_generated/dataModel'
 import type { QueryCtx } from './_generated/server'
@@ -426,6 +433,54 @@ export const comparePeriods = internalQuery({
       secondPeriod,
       changes: compareCurrencyTotals(firstPeriod, secondPeriod),
       sources: [...firstDocuments, ...secondDocuments].slice(0, 20).map(source),
+      documentsConsidered: result.documents.length,
+      truncated: result.truncated,
+    }
+  },
+})
+
+export const getChartData = internalQuery({
+  args: {
+    ownerTokenIdentifier: v.string(),
+    intent: chartIntentValidator,
+    chartType: v.optional(chartTypeValidator),
+    interval: v.optional(chartIntervalValidator),
+    currency: v.optional(v.string()),
+    fromDate: v.optional(v.string()),
+    toDate: v.optional(v.string()),
+  },
+  returns: v.object({
+    charts: v.array(chartSpecValidator),
+    sources: v.array(sourceValidator),
+    ...boundedMetaFields,
+  }),
+  handler: async (ctx, args) => {
+    const result = await ownerDocuments(ctx, args.ownerTokenIdentifier)
+    const documents = result.documents.filter(usable)
+    const { charts } = buildFinanceChartSpecs(
+      documents.map((document) => ({
+        currency: document.currency,
+        issueDate: document.issueDate,
+        supplier: document.merchantOrSupplierName,
+        documentType: document.documentType,
+        paymentStatus: document.structuredResult?.paymentStatus ?? undefined,
+        totalMinor: document.totalMinor,
+        taxMinor: document.taxMinor,
+      })),
+      args,
+    )
+    const requestedCurrency = args.currency?.trim().toUpperCase()
+    const relevantSources = documents.filter(
+      (document) =>
+        inRange(document, args.fromDate, args.toDate) &&
+        (args.intent !== 'invoice_status' ||
+          document.documentType === 'invoice') &&
+        (!requestedCurrency ||
+          (document.currency ?? 'UNKNOWN').toUpperCase() === requestedCurrency),
+    )
+    return {
+      charts,
+      sources: relevantSources.slice(0, 20).map(source),
       documentsConsidered: result.documents.length,
       truncated: result.truncated,
     }

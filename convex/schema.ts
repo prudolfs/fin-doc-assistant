@@ -9,6 +9,7 @@ import {
   processingStageValidator,
   usageValidator,
 } from './documentValidators'
+import { chartSpecValidator } from './chartValidators'
 
 export default defineSchema({
   chats: defineTable({
@@ -30,6 +31,17 @@ export default defineSchema({
       'lastMessageAt',
     ])
     .index('by_threadId', ['threadId']),
+
+  chartArtifacts: defineTable({
+    ownerTokenIdentifier: v.string(),
+    chatId: v.id('chats'),
+    messageId: v.string(),
+    artifactKey: v.string(),
+    spec: chartSpecValidator,
+    createdAt: v.number(),
+  })
+    .index('by_chatId_and_createdAt', ['chatId', 'createdAt'])
+    .index('by_artifactKey', ['artifactKey']),
 
   documents: defineTable({
     ownerTokenIdentifier: v.string(),
