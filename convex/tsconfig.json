@@ -8,11 +8,12 @@
     "allowSyntheticDefaultImports": true,
     "target": "ESNext",
     "lib": ["ES2021", "DOM"],
+    "types": ["node"],
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "isolatedModules": true,
     "noEmit": true
   },
   "include": ["./**/*"],
-  "exclude": ["./_generated"]
+  "exclude": ["./_generated", "./**/*.test.ts"]
 }

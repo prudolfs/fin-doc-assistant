@@ -840,12 +840,18 @@ Exit criterion: the difficult invoice classes identified during production testi
 
 ### Phase 7 — production hardening
 
-- [ ] Add rate limits, quotas, observability, and alerts.
-- [ ] Add data export and account deletion.
-- [ ] Add retention controls and privacy documentation.
-- [ ] Add end-to-end, authorization, prompt-injection, and regression tests.
-- [ ] Review OAuth production settings and secrets.
-- [ ] Review AI-provider privacy and data-retention configuration.
+- [x] Add rate limits, quotas, observability, and alerts.
+- [x] Add data export and account deletion.
+- [x] Add retention controls and privacy documentation.
+- [x] Add end-to-end, authorization, prompt-injection, and regression tests.
+- [x] Review OAuth production settings and secrets.
+- [x] Review AI-provider privacy and data-retention configuration.
+
+See [`phase-7-production-hardening.md`](./phase-7-production-hardening.md) for
+the implementation and verification summary, [`privacy.md`](./privacy.md) for
+the user-facing data controls, and
+[`production-readiness.md`](./production-readiness.md) for the reviewed
+deployment checklist.
 
 ## 21. Testing plan
 

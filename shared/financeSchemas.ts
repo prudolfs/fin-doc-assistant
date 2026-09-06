@@ -78,6 +78,63 @@ export const pageBatchExtractionSchema = z.object({
   warnings: z.array(z.string().trim().min(1)).max(10),
 })
 
+// Provider constrained-decoding engines can reject otherwise valid JSON Schema
+// when nested arrays carry large maxItems values or strings use regex matchers.
+// Generate against this structurally identical, low-state schema, then parse the
+// result with the strict schemas above before any value reaches persistence.
+const modelNullableText = z.string().nullable()
+const modelNullableNumber = z.number().nullable()
+const modelExtractionSchema = z.object({
+  documentType: z.enum(['receipt', 'invoice']),
+  merchantOrSupplierName: modelNullableText,
+  supplierAddress: modelNullableText,
+  supplierTaxIdentifier: modelNullableText,
+  customerName: modelNullableText,
+  customerAddress: modelNullableText,
+  documentNumber: modelNullableText,
+  issueDate: z.object({ printed: modelNullableText, iso: modelNullableText }),
+  dueDate: z.object({ printed: modelNullableText, iso: modelNullableText }),
+  currency: modelNullableText,
+  paymentStatus: z
+    .enum(['paid', 'unpaid', 'partially_paid', 'unknown'])
+    .nullable(),
+  paymentMethod: modelNullableText,
+  subtotalMinor: modelNullableNumber,
+  discountMinor: modelNullableNumber,
+  taxMinor: modelNullableNumber,
+  totalMinor: modelNullableNumber,
+  lineItems: z.array(
+    z.object({
+      description: z.string(),
+      quantity: modelNullableNumber,
+      unit: modelNullableText,
+      unitPriceMinor: modelNullableNumber,
+      discountMinor: modelNullableNumber,
+      taxRateBasisPoints: modelNullableNumber,
+      taxMinor: modelNullableNumber,
+      totalMinor: modelNullableNumber,
+      sourcePage: modelNullableNumber,
+    }),
+  ),
+  evidence: z.array(
+    z.object({
+      field: z.string(),
+      printedValue: z.string(),
+      sourcePage: z.number(),
+    }),
+  ),
+  warnings: z.array(z.string()),
+  confidence: z.number(),
+})
+
+export const financeDocumentModelOutputSchema = modelExtractionSchema
+
+export const pageBatchModelOutputSchema = z.object({
+  documents: z.array(modelExtractionSchema),
+  multipleDocumentsDetected: z.boolean(),
+  warnings: z.array(z.string()),
+})
+
 export type FinanceDocumentExtraction = z.infer<
   typeof financeDocumentExtractionSchema
 >

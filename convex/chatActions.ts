@@ -16,6 +16,9 @@ import {
 } from '../shared/chartSpec'
 import type { ActionCtx } from './_generated/server'
 import type { Id } from './_generated/dataModel'
+import type { ChartSpec } from '../shared/chartSpec'
+import { gatewayPrivacyProviderOptions } from '../shared/productionConfig'
+import { relativeDateContext } from '../shared/relativeDateContext'
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const optionalDateRange = {
@@ -160,7 +163,7 @@ function createFinanceTools(
         )
         return {
           ...result,
-          charts: result.charts.map((spec, index) => ({
+          charts: result.charts.map((spec: ChartSpec, index: number) => ({
             artifactId: artifactIds[index],
             spec,
           })),
@@ -173,6 +176,7 @@ function createFinanceTools(
 const instructions = `You are a careful personal finance document assistant.
 Answer questions only from the current user's data returned by the available read-only tools.
 Call the smallest relevant tool instead of asking for or assuming all documents.
+Resolve relative dates such as today, this week, and this month from the current UTC date supplied below, unless the user provides another timezone.
 Use getChartData when a trend, distribution, concentration, or comparison is materially clearer as a chart; do not chart a single value.
 Never invent documents, suppliers, dates, payment states, currencies, totals, or tax conclusions.
 Money is returned in integer minor units. Convert it to readable decimal amounts and keep different currencies separate.
@@ -191,13 +195,17 @@ export const respond = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const chat: { status: string } | null = await ctx.runQuery(
-      internal.internal.chats.getForResponse,
-      args,
-    )
-    if (!chat || chat.status !== 'responding') return null
-
     try {
+      const chat: { status: string } | null = await ctx.runQuery(
+        internal.internal.chats.getForResponse,
+        {
+          chatId: args.chatId,
+          threadId: args.threadId,
+          ownerTokenIdentifier: args.ownerTokenIdentifier,
+        },
+      )
+      if (!chat || chat.status !== 'responding') return null
+
       const modelId = resolveChatModel(env.AI_GATEWAY_CHAT_MODEL)
       const languageModel = env.AI_GATEWAY_API_KEY
         ? createGateway({ apiKey: env.AI_GATEWAY_API_KEY })(modelId)
@@ -205,7 +213,7 @@ export const respond = internalAction({
       const agent = new Agent(components.agent, {
         name: 'Finance Document Assistant',
         languageModel,
-        instructions,
+        instructions: `${instructions}\n${relativeDateContext(new Date())}`,
         stopWhen: stepCountIs(6),
       })
       const result = await agent.streamText(
@@ -216,6 +224,9 @@ export const respond = internalAction({
         },
         {
           promptMessageId: args.promptMessageId,
+          providerOptions: gatewayPrivacyProviderOptions(
+            env.AI_GATEWAY_ZERO_DATA_RETENTION,
+          ),
           tools: createFinanceTools(
             ctx,
             args.ownerTokenIdentifier,
@@ -241,6 +252,13 @@ export const respond = internalAction({
       })
       const safeErrorMessage =
         'The assistant could not finish this response. Please try again.'
+      await ctx.runMutation(internal.observability.recordEvent, {
+        ownerTokenIdentifier: args.ownerTokenIdentifier,
+        kind: 'chat_response_failed',
+        severity: 'error',
+        resourceId: args.chatId,
+        safeMessage: safeErrorMessage,
+      })
       try {
         await saveMessage(ctx, components.agent, {
           threadId: args.threadId,

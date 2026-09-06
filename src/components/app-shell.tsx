@@ -1,6 +1,8 @@
+/* oxlint-disable no-underscore-dangle */
+
 import { api } from '../../convex/_generated/api'
-import { Link, useRouterState } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { Link, useNavigate, useRouterState } from '@tanstack/react-router'
+import { useMutation, useQuery } from 'convex/react'
 import {
   ChevronsLeft,
   ChevronsRight,
@@ -13,6 +15,7 @@ import {
   Moon,
   Settings,
   Sun,
+  Trash2,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -109,7 +112,46 @@ function Sidebar({
   onToggleCollapsed: () => void
 }) {
   const recentChats = useQuery(api.chats.listRecent)
-  const groupedChats = groupRecentChats(recentChats ?? [])
+  const removeChat = useMutation(api.chats.remove)
+  const navigate = useNavigate()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null)
+  const [hiddenChatIds, setHiddenChatIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const groupedChats = groupRecentChats(
+    (recentChats ?? []).filter((chat) => !hiddenChatIds.has(chat._id)),
+  )
+
+  async function deleteChat(chat: {
+    _id: NonNullable<typeof recentChats>[number]['_id']
+    title: string
+  }) {
+    if (!window.confirm(`Delete “${chat.title}” and all of its messages?`)) {
+      return
+    }
+    setDeletingChatId(chat._id)
+    setDeleteError(null)
+    try {
+      await removeChat({ chatId: chat._id })
+      setHiddenChatIds((current) => new Set(current).add(chat._id))
+      if (pathname === `/app/chat/${chat._id}`) {
+        onCloseMobile()
+        await navigate({ to: '/app/chat/new' })
+      }
+    } catch (cause) {
+      setDeleteError(
+        cause instanceof Error
+          ? cause.message
+          : 'Could not delete conversation.',
+      )
+    } finally {
+      setDeletingChatId(null)
+    }
+  }
 
   return (
     <aside
@@ -166,6 +208,14 @@ function Sidebar({
             <p className="px-2 text-xs font-semibold tracking-[0.14em] text-neutral-500 uppercase">
               Recent chats
             </p>
+            {deleteError && (
+              <p
+                className="mt-2 rounded-lg bg-red-950/60 px-2 py-1.5 text-xs text-red-300"
+                role="alert"
+              >
+                {deleteError}
+              </p>
+            )}
             {recentChats && recentChats.length === 0 && (
               <p className="mt-3 px-2 text-xs leading-5 text-neutral-500">
                 No conversations yet.
@@ -178,18 +228,38 @@ function Sidebar({
                     {group.label}
                   </p>
                   <div className="mt-1 space-y-0.5">
-                    {group.chats.map(({ _id: chatId, title }) => (
-                      <Link
-                        key={chatId}
-                        activeProps={{ className: 'bg-white/12 text-white' }}
-                        className="block truncate rounded-lg px-2 py-2 text-xs text-neutral-400 hover:bg-white/8 hover:text-white"
-                        to="/app/chat/$chatId"
-                        params={{ chatId }}
-                        title={title}
-                        onClick={onCloseMobile}
+                    {group.chats.map((chat) => (
+                      <div
+                        key={chat._id}
+                        className="group/chat flex items-center rounded-lg hover:bg-white/8"
                       >
-                        {title}
-                      </Link>
+                        <Link
+                          activeProps={{ className: 'bg-white/12 text-white' }}
+                          className="min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-xs text-neutral-400 hover:text-white"
+                          to="/app/chat/$chatId"
+                          params={{ chatId: chat._id }}
+                          title={chat.title}
+                          onClick={onCloseMobile}
+                        >
+                          {chat.title}
+                        </Link>
+                        <button
+                          aria-label={`Delete conversation ${chat.title}`}
+                          className="mr-1 rounded-md p-1 text-neutral-600 opacity-0 transition group-hover/chat:opacity-100 hover:bg-red-950/60 hover:text-red-300 focus:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                          disabled={
+                            chat.status === 'responding' ||
+                            deletingChatId === chat._id
+                          }
+                          title={
+                            chat.status === 'responding'
+                              ? 'Wait for the response to finish'
+                              : 'Delete conversation'
+                          }
+                          onClick={() => deleteChat(chat)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </section>

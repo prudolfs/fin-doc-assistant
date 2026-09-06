@@ -12,6 +12,12 @@ import {
   usageValidator,
 } from './documentValidators'
 import { chartSpecValidator } from './chartValidators'
+import {
+  deletionPhaseValidator,
+  operationalEventKindValidator,
+  operationalSeverityValidator,
+  retentionDaysValidator,
+} from './accountValidators'
 
 export default defineSchema({
   chats: defineTable({
@@ -43,7 +49,11 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index('by_chatId_and_createdAt', ['chatId', 'createdAt'])
-    .index('by_artifactKey', ['artifactKey']),
+    .index('by_artifactKey', ['artifactKey'])
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ]),
 
   documents: defineTable({
     ownerTokenIdentifier: v.string(),
@@ -86,6 +96,10 @@ export default defineSchema({
       'ownerTokenIdentifier',
       'createdAt',
     ])
+    .index('by_ownerTokenIdentifier_and_status', [
+      'ownerTokenIdentifier',
+      'status',
+    ])
     .index('by_storageId', ['storageId'])
     .index('by_ownerTokenIdentifier_and_sha256_and_schemaVersion', [
       'ownerTokenIdentifier',
@@ -108,7 +122,11 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index('by_documentId', ['documentId'])
-    .index('by_idempotencyKey', ['idempotencyKey']),
+    .index('by_idempotencyKey', ['idempotencyKey'])
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ]),
 
   documentExtractions: defineTable({
     ownerTokenIdentifier: v.string(),
@@ -127,7 +145,12 @@ export default defineSchema({
     processingStrategy: v.optional(processingStrategyValidator),
     multipleDocumentsDetected: v.optional(v.boolean()),
     createdAt: v.number(),
-  }).index('by_documentId_and_attempt', ['documentId', 'attempt']),
+  })
+    .index('by_documentId_and_attempt', ['documentId', 'attempt'])
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ]),
 
   documentPages: defineTable({
     ownerTokenIdentifier: v.string(),
@@ -137,7 +160,12 @@ export default defineSchema({
     text: v.optional(v.string()),
     ocrConfidence: v.optional(v.number()),
     createdAt: v.number(),
-  }).index('by_documentId_and_pageNumber', ['documentId', 'pageNumber']),
+  })
+    .index('by_documentId_and_pageNumber', ['documentId', 'pageNumber'])
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ]),
 
   documentAuditEvents: defineTable({
     ownerTokenIdentifier: v.string(),
@@ -147,5 +175,70 @@ export default defineSchema({
     changedFields: v.optional(v.array(editableDocumentFieldValidator)),
     detail: v.optional(v.string()),
     createdAt: v.number(),
-  }).index('by_documentId', ['documentId']),
+  })
+    .index('by_documentId', ['documentId'])
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ]),
+
+  accountSettings: defineTable({
+    ownerTokenIdentifier: v.string(),
+    retentionDays: retentionDaysValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_ownerTokenIdentifier', ['ownerTokenIdentifier']),
+
+  accountUsage: defineTable({
+    ownerTokenIdentifier: v.string(),
+    documentCount: v.number(),
+    chatCount: v.number(),
+    storageBytes: v.number(),
+    updatedAt: v.number(),
+  }).index('by_ownerTokenIdentifier', ['ownerTokenIdentifier']),
+
+  dataExports: defineTable({
+    ownerTokenIdentifier: v.string(),
+    storageId: v.id('_storage'),
+    byteSize: v.number(),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ])
+    .index('by_expiresAt', ['expiresAt']),
+
+  operationalEvents: defineTable({
+    ownerTokenIdentifier: v.optional(v.string()),
+    kind: operationalEventKindValidator,
+    severity: operationalSeverityValidator,
+    resourceId: v.optional(v.string()),
+    safeMessage: v.string(),
+    createdAt: v.number(),
+  })
+    .index('by_kind_and_createdAt', ['kind', 'createdAt'])
+    .index('by_ownerTokenIdentifier_and_createdAt', [
+      'ownerTokenIdentifier',
+      'createdAt',
+    ]),
+
+  systemAlerts: defineTable({
+    key: v.string(),
+    kind: operationalEventKindValidator,
+    status: v.union(v.literal('active'), v.literal('resolved')),
+    eventCount: v.number(),
+    windowStartedAt: v.number(),
+    openedAt: v.number(),
+    lastSeenAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  }).index('by_key', ['key']),
+
+  accountDeletionJobs: defineTable({
+    ownerTokenIdentifier: v.string(),
+    phase: deletionPhaseValidator,
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_ownerTokenIdentifier', ['ownerTokenIdentifier']),
 })

@@ -19,6 +19,8 @@ import {
   financeDocumentExtractionValidator,
 } from './documentValidators'
 import { resolveDocumentLimits } from './lib/documentConfig'
+import { accountQuotas, getOrCreateAccountUsage } from './lib/accountUsage'
+import { rateLimiter } from './rateLimits'
 import schema from './schema'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 
@@ -69,7 +71,11 @@ export const generateUploadUrl = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
-    await requireIdentity(ctx)
+    const identity = await requireIdentity(ctx)
+    await rateLimiter.limit(ctx, 'uploadUrl', {
+      key: identity.tokenIdentifier,
+      throws: true,
+    })
     return await ctx.storage.generateUploadUrl()
   },
 })
@@ -83,6 +89,10 @@ export const registerDocument = mutation({
   returns: v.id('documents'),
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
+    await rateLimiter.limit(ctx, 'registerDocument', {
+      key: identity.tokenIdentifier,
+      throws: true,
+    })
     const filename = args.originalFilename.trim()
     if (!filename || filename.length > 240) {
       throw new Error('Filename must contain between 1 and 240 characters')
@@ -140,6 +150,38 @@ export const registerDocument = mutation({
       return duplicate._id
     }
 
+    const usage = await getOrCreateAccountUsage(ctx, identity.tokenIdentifier)
+    const accountQuota = accountQuotas()
+    if (usage.documentCount >= accountQuota.maxDocuments) {
+      throw new Error(
+        `Account document quota reached (${accountQuota.maxDocuments}).`,
+      )
+    }
+    if (usage.storageBytes + metadata.size > accountQuota.maxStorageBytes) {
+      throw new Error('Account storage quota reached.')
+    }
+    const [queuedCount, processingCount] = await Promise.all([
+      ctx.db
+        .query('documents')
+        .withIndex('by_ownerTokenIdentifier_and_status', (q) =>
+          q
+            .eq('ownerTokenIdentifier', identity.tokenIdentifier)
+            .eq('status', 'queued'),
+        )
+        .take(3),
+      ctx.db
+        .query('documents')
+        .withIndex('by_ownerTokenIdentifier_and_status', (q) =>
+          q
+            .eq('ownerTokenIdentifier', identity.tokenIdentifier)
+            .eq('status', 'processing'),
+        )
+        .take(3),
+    ])
+    if (queuedCount.length + processingCount.length >= 3) {
+      throw new Error('Wait for an existing document to finish processing.')
+    }
+
     const now = Date.now()
     const documentId = await ctx.db.insert('documents', {
       ownerTokenIdentifier: identity.tokenIdentifier,
@@ -164,6 +206,11 @@ export const registerDocument = mutation({
       attempt: 1,
       idempotencyKey: `${args.storageId}:${DOCUMENT_SCHEMA_VERSION}`,
       createdAt: now,
+      updatedAt: now,
+    })
+    await ctx.db.patch(usage._id, {
+      documentCount: usage.documentCount + 1,
+      storageBytes: usage.storageBytes + metadata.size,
       updatedAt: now,
     })
     await ctx.db.insert('documentAuditEvents', {
@@ -337,6 +384,10 @@ export const retry = mutation({
   returns: v.id('documentJobs'),
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
+    await rateLimiter.limit(ctx, 'retryDocument', {
+      key: identity.tokenIdentifier,
+      throws: true,
+    })
     const document = await ctx.db.get('documents', args.documentId)
     if (
       !document ||
@@ -407,6 +458,8 @@ export const remove = mutation({
       throw new Error('Wait for processing to finish before deleting')
     }
 
+    const usage = await getOrCreateAccountUsage(ctx, identity.tokenIdentifier)
+
     const [jobs, extractions, pages] = await Promise.all([
       ctx.db
         .query('documentJobs')
@@ -440,6 +493,11 @@ export const remove = mutation({
     for (const page of pages) await ctx.db.delete('documentPages', page._id)
     await ctx.storage.delete(document.storageId)
     await ctx.db.delete('documents', args.documentId)
+    await ctx.db.patch(usage._id, {
+      documentCount: Math.max(0, usage.documentCount - 1),
+      storageBytes: Math.max(0, usage.storageBytes - document.byteSize),
+      updatedAt: Date.now(),
+    })
     return null
   },
 })

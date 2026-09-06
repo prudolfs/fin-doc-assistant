@@ -18,7 +18,9 @@ import {
 } from '../shared/documentValidation'
 import {
   financeDocumentExtractionSchema,
+  financeDocumentModelOutputSchema,
   pageBatchExtractionSchema,
+  pageBatchModelOutputSchema,
 } from '../shared/financeSchemas'
 import { internal } from './_generated/api'
 import { env, internalAction } from './_generated/server'
@@ -36,6 +38,7 @@ import type {
   LanguageModelUsage,
   TextPart,
 } from 'ai'
+import { gatewayPrivacyProviderOptions } from '../shared/productionConfig'
 
 const DIRECT_PDF_PAGE_LIMIT = 8
 const PAGE_BATCH_SIZE = 4
@@ -104,16 +107,34 @@ function combineUsage(left: StoredUsage, right: LanguageModelUsage) {
 
 function safeFailure(error: unknown) {
   if (error instanceof Error) {
+    const lowerMessage = error.message.toLocaleLowerCase()
     if (error.message.includes('signature')) {
       return { code: 'invalid_file_signature', message: error.message }
     }
     if (error.message.includes('page limit')) {
       return { code: 'page_limit_exceeded', message: error.message }
     }
-    if (error.message.toLocaleLowerCase().includes('password')) {
+    if (lowerMessage.includes('password')) {
       return {
         code: 'encrypted_pdf',
         message: 'Password-protected PDFs are not supported.',
+      }
+    }
+    if (lowerMessage.includes('ai gateway is not configured')) {
+      return {
+        code: 'ai_gateway_not_configured',
+        message: 'AI document processing is not configured.',
+      }
+    }
+    if (
+      lowerMessage.includes('ratelimit') ||
+      lowerMessage.includes('rate limit') ||
+      lowerMessage.includes('rate-limit')
+    ) {
+      return {
+        code: 'ai_provider_rate_limited',
+        message:
+          'AI document processing is temporarily rate-limited. Try again in a few minutes.',
       }
     }
   }
@@ -151,11 +172,14 @@ async function directExtraction(
   return await generateText({
     model: languageModel,
     output: Output.object({
-      schema: financeDocumentExtractionSchema,
+      schema: financeDocumentModelOutputSchema,
       name: 'finance_document_extraction',
       description: 'Validated fields extracted from one receipt or invoice.',
     }),
     system: DOCUMENT_EXTRACTION_INSTRUCTIONS,
+    providerOptions: gatewayPrivacyProviderOptions(
+      env.AI_GATEWAY_ZERO_DATA_RETENTION,
+    ),
     messages: [
       {
         role: 'user',
@@ -173,7 +197,11 @@ async function directExtraction(
         ],
       },
     ],
-  })
+    maxOutputTokens: 8_192,
+  }).then((result) => ({
+    output: financeDocumentExtractionSchema.parse(result.output),
+    usage: result.usage,
+  }))
 }
 
 const batchInstructions = `${DOCUMENT_EXTRACTION_INSTRUCTIONS}
@@ -231,15 +259,22 @@ async function batchExtraction(
   return await generateText({
     model: languageModel,
     output: Output.object({
-      schema: pageBatchExtractionSchema,
+      schema: pageBatchModelOutputSchema,
       name: 'finance_document_page_batch',
       description:
         'Finance document candidates visible in an original-page-numbered PDF page batch.',
     }),
     system: batchInstructions,
+    providerOptions: gatewayPrivacyProviderOptions(
+      env.AI_GATEWAY_ZERO_DATA_RETENTION,
+    ),
     messages: [{ role: 'user', content }],
+    maxOutputTokens: 8_192,
     experimental_include: { requestBody: false, responseBody: false },
-  })
+  }).then((result) => ({
+    output: pageBatchExtractionSchema.parse(result.output),
+    usage: result.usage,
+  }))
 }
 
 async function fallbackExtraction(
@@ -505,6 +540,13 @@ export const processDocument = internalAction({
         error: error instanceof Error ? error.message : 'Unknown error',
       })
       const failure = safeFailure(error)
+      await ctx.runMutation(internal.observability.recordEvent, {
+        ownerTokenIdentifier: queued.document.ownerTokenIdentifier,
+        kind: 'document_processing_failed',
+        severity: 'error',
+        resourceId: args.documentId,
+        safeMessage: failure.message,
+      })
       await ctx.runMutation(internal.internal.documentJobs.fail, {
         ...args,
         errorCode: failure.code,

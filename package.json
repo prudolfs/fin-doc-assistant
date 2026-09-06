@@ -11,6 +11,8 @@
     "format:check": "oxfmt . --check",
     "phase0:evaluate": "tsx scripts/evaluate-phase0.ts",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "readme:demo": "node scripts/generate-readme-gif.mjs",
     "check": "tsc --noEmit && oxlint . && oxfmt . --check && vitest run",
     "types": "tsc --noEmit"
   },
@@ -20,6 +22,7 @@
     "@convex-dev/agent": "^0.7.1",
     "@convex-dev/ai-sdk-provider": "^0.1.0",
     "@convex-dev/better-auth": "0.12.5",
+    "@convex-dev/rate-limiter": "0.3.2",
     "@convex-dev/react-query": "^0.1.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
@@ -46,10 +49,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "5.0.0",
+    "@playwright/test": "1.62.1",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react-swc": "^4.3.3",
+    "convex-test": "0.0.56",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
     "tsx": "^4.23.13",

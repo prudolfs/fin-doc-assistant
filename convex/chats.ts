@@ -12,6 +12,8 @@ import { v } from 'convex/values'
 import { components, internal } from './_generated/api'
 import { mutation, query } from './_generated/server'
 import schema from './schema'
+import { rateLimiter } from './rateLimits'
+import { accountQuotas, getOrCreateAccountUsage } from './lib/accountUsage'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 
 async function requireIdentity(ctx: QueryCtx | MutationCtx) {
@@ -38,6 +40,15 @@ export const create = mutation({
   returns: v.id('chats'),
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
+    await rateLimiter.limit(ctx, 'chatMessage', {
+      key: identity.tokenIdentifier,
+      throws: true,
+    })
+    await rateLimiter.limit(ctx, 'globalChatMessage', { throws: true })
+    const usage = await getOrCreateAccountUsage(ctx, identity.tokenIdentifier)
+    if (usage.chatCount >= accountQuotas().maxChats) {
+      throw new Error(`Account conversation quota reached.`)
+    }
     const prompt = normalizedPrompt(args.prompt)
     const title = titleFromPrompt(prompt)
     const threadId = await createThread(ctx, components.agent, {
@@ -52,6 +63,10 @@ export const create = mutation({
       status: 'responding',
       lastMessageAt: now,
       createdAt: now,
+      updatedAt: now,
+    })
+    await ctx.db.patch(usage._id, {
+      chatCount: usage.chatCount + 1,
       updatedAt: now,
     })
     const { messageId } = await saveMessage(ctx, components.agent, {
@@ -81,6 +96,11 @@ export const send = mutation({
     if (chat.status === 'responding') {
       throw new Error('Wait for the current response to finish')
     }
+    await rateLimiter.limit(ctx, 'chatMessage', {
+      key: identity.tokenIdentifier,
+      throws: true,
+    })
+    await rateLimiter.limit(ctx, 'globalChatMessage', { throws: true })
     const prompt = normalizedPrompt(args.prompt)
     const { messageId } = await saveMessage(ctx, components.agent, {
       threadId: chat.threadId,
@@ -128,6 +148,25 @@ export const get = query({
     if (!chatId) return null
     const chat = await ctx.db.get('chats', chatId)
     return chat?.ownerTokenIdentifier === identity.tokenIdentifier ? chat : null
+  },
+})
+
+export const remove = mutation({
+  args: { chatId: v.id('chats') },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const chat = await ctx.db.get('chats', args.chatId)
+    if (!chat || chat.ownerTokenIdentifier !== identity.tokenIdentifier) {
+      throw new Error('Conversation was not found')
+    }
+    if (chat.status === 'responding') {
+      throw new Error('Wait for the current response to finish before deleting')
+    }
+    await ctx.scheduler.runAfter(0, internal.retention.deleteChatData, {
+      chatId: chat._id,
+    })
+    return null
   },
 })
 
