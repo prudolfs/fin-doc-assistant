@@ -9,7 +9,6 @@
     "lint": "oxlint .",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
-    "phase0:evaluate": "tsx scripts/evaluate-phase0.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "readme:demo": "node scripts/generate-readme-gif.mjs",

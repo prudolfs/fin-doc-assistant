@@ -47,7 +47,7 @@ Re-run the measurement with:
 set -a
 source .env
 set +a
-pnpm phase0:evaluate
+pnpm exec tsx scripts/evaluate-phase0.ts
 ```
 
 The protected `/app` screen exercises the complete product path: direct browser

@@ -1,7 +1,7 @@
 /* oxlint-disable no-underscore-dangle */
 
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readdir, unlink } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import { chromium } from '@playwright/test'
@@ -16,6 +16,11 @@ const convexBinary = resolve('node_modules/.bin/convex')
 const viteBinary = resolve('node_modules/.bin/vite')
 
 await mkdir(outputDirectory, { recursive: true })
+for (const filename of await readdir(outputDirectory)) {
+  if (/^frame-\d+-.*\.png$/.test(filename)) {
+    await unlink(resolve(outputDirectory, filename))
+  }
+}
 
 let server
 let browser
@@ -166,6 +171,28 @@ function createGroundedDemoChat(documentId) {
   )
 }
 
+function addChartDemoTurn(chatId, documentId) {
+  const document = JSON.parse(
+    runConvex([
+      'run',
+      '--inline-query',
+      `return await ctx.db.get("${documentId}");`,
+    ]),
+  )
+  if (!document?.ownerTokenIdentifier) {
+    throw new Error('Could not find the README document owner')
+  }
+  runConvex([
+    'run',
+    'readmeDemo:addChartTurn',
+    JSON.stringify({
+      chatId,
+      documentId,
+      ownerTokenIdentifier: document.ownerTokenIdentifier,
+    }),
+  ])
+}
+
 async function deleteDemoAccount() {
   if (!page || page.isClosed()) return
   try {
@@ -240,9 +267,11 @@ try {
   await page.locator('article').nth(1).waitFor()
   await shot(4, 'grounded-chat')
 
-  await page.goto(`${baseUrl}/app/settings`)
-  await page.getByRole('heading', { name: 'Usage and limits' }).waitFor()
-  await shot(5, 'settings')
+  addChartDemoTurn(chatId, documentId)
+  await page
+    .getByRole('heading', { name: 'Spending by supplier (EUR)' })
+    .waitFor({ timeout: 30_000 })
+  await shot(5, 'chart-chat')
 
   const ffmpeg = spawnSync(
     'ffmpeg',

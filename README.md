@@ -79,10 +79,10 @@ pnpm readme:demo  # Recreate the README screenshots and animated GIF
 The README demo command requires Google Chrome, `ffmpeg`, configured local and
 Convex environments, and access to the development deployment. It uses the real
 `tests/fixtures/phase0/receipt.png`, creates an isolated temporary account,
-captures five application states, and then requests account deletion. If the AI
-Gateway is unavailable or rate-limited, the capture script completes that known
-test fixture through the same strict persistence validator using its
-permission-safe expected values.
+captures upload, document preview, document list, grounded answer, and chart
+states, and then requests account deletion. If the AI Gateway is unavailable or
+rate-limited, the capture script completes that known test fixture through the
+same strict persistence validator using its permission-safe expected values.
 
 ## Architecture
 
